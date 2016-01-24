@@ -25,6 +25,8 @@ import re
 from ycmd.utils import ToUtf8IfNeeded
 from ycmd import user_options_store
 
+src_id = vim.new_highlight_source()
+
 BUFFER_COMMAND_MAP = { 'same-buffer'      : 'edit',
                        'horizontal-split' : 'split',
                        'vertical-split'   : 'vsplit',
@@ -185,10 +187,7 @@ def UnPlaceDummySign( sign_id, buffer_num ):
 
 
 def ClearYcmSyntaxMatches():
-  matches = VimExpressionToPythonType( 'getmatches()' )
-  for match in matches:
-    if match[ 'group' ].startswith( 'Ycm' ):
-      vim.eval( 'matchdelete({0})'.format( match[ 'id' ] ) )
+  vim.current.buffer.clear_highlight(src_id)
 
 
 # Returns the ID of the newly added match
@@ -208,13 +207,12 @@ def AddDiagnosticSyntaxMatch( line_num,
                                                               column_end_num )
 
   if not column_end_num:
-    return GetIntValue(
-      "matchadd('{0}', '\%{1}l\%{2}c')".format( group, line_num, column_num ) )
-  else:
-    return GetIntValue(
-      "matchadd('{0}', '\%{1}l\%{2}c\_.\\{{-}}\%{3}l\%{4}c')".format(
-        group, line_num, column_num, line_end_num, column_end_num ) )
+      column_end_num = -1
 
+  buf = vim.current.buffer
+
+  for lnum in range(line_num,line_end_num+1):
+      buf.add_highlight(group, lnum-1, column_num-1, column_end_num-1, src_id)
 
 # Clamps the line and column numbers so that they are not past the contents of
 # the buffer. Numbers are 1-based.
